@@ -32,14 +32,15 @@ class CameraScreen extends StatefulWidget {
 
 class _CameraScreenState extends State<CameraScreen> {
   bool _isLoading = true;
-  late CameraController _cameraController;
-
   bool _isRecording = false;
+  CameraLensDirection _cameraLensDirection = CameraLensDirection.front;
+  late CameraController _cameraController;
 
   _initCamera() async {
     final cameras = await availableCameras();
-    final front = cameras.firstWhere((camera) => camera.lensDirection == CameraLensDirection.front);
-    _cameraController = CameraController(front, ResolutionPreset.max);
+    final direction = cameras
+        .firstWhere((camera) => camera.lensDirection == _cameraLensDirection);
+    _cameraController = CameraController(direction, ResolutionPreset.max);
     await _cameraController.initialize();
     setState(() {
       _isLoading = false;
@@ -59,6 +60,17 @@ class _CameraScreenState extends State<CameraScreen> {
       await _cameraController.prepareForVideoRecording();
       await _cameraController.startVideoRecording();
       setState(() => _isRecording = true);
+    }
+  }
+
+  _toggleCamera() async {
+    if (!_isRecording) {
+      setState(() {
+      _cameraLensDirection = _cameraLensDirection == CameraLensDirection.front
+          ? CameraLensDirection.back
+          : CameraLensDirection.front;
+      });
+      await _initCamera();
     }
   }
 
@@ -91,10 +103,20 @@ class _CameraScreenState extends State<CameraScreen> {
           CameraPreview(_cameraController),
           Padding(
             padding: const EdgeInsets.all(25),
-            child: FloatingActionButton(
-              backgroundColor: Colors.red,
-              child: Icon(_isRecording ? Icons.stop : Icons.circle),
-              onPressed: () => _recordVideo(),
+            child: Row(
+              children: [
+                FloatingActionButton(
+                  backgroundColor: Colors.red,
+                  child: Icon(_isRecording ? Icons.stop : Icons.circle),
+                  onPressed: () => _recordVideo(),
+                ),
+                if (!_isRecording) FloatingActionButton(
+                  backgroundColor: Colors.white,
+                  child: Icon(Icons.flip_camera_ios_rounded),
+                  onPressed: () async => await _toggleCamera(),
+                ),
+
+              ]
             ),
           ),
         ],
